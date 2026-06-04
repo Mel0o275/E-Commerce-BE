@@ -3,7 +3,6 @@ import { LoginDto, signupDto } from "./dto/authentication.dto";
 import { IUser } from "src/common/interface/user.interface";
 import { compareHash, generateHash } from "src/common/security/hash.security";
 import { sendOtpEmail, sendResetPasswordEmail } from "src/common/utils/otp/email.otp";
-import { set } from "src/common/services/redis.service";
 import { UserRepo } from "src/common/repo/user.repo";
 import { OtpRepo } from "src/common/repo/otp.repo";
 import { OtpEnum } from "src/common/enum/otp.enum";
@@ -13,6 +12,7 @@ import { provider, RoleEnum } from "src/common/enum/user.enum";
 import { USER_TOKEN_SECRET_KEY } from "src/config/config";
 import { ConfigService } from "@nestjs/config";
 import { OAuth2Client } from "google-auth-library";
+import { RedisService } from "src/common/services/redis.service";
 
 export interface SignUpResponse {
     message: string;
@@ -21,7 +21,7 @@ export interface SignUpResponse {
 
 @Injectable()
 export class AuthenticationService {
-    constructor(private readonly UserRepo: UserRepo, private readonly OtpRepo: OtpRepo, private readonly TokenSecurity: TokenSecurity, private readonly config: ConfigService) { }
+    constructor(private readonly UserRepo: UserRepo, private readonly OtpRepo: OtpRepo, private readonly TokenSecurity: TokenSecurity, private readonly config: ConfigService, private readonly redis: RedisService) { }
 
     // ================= SIGN UP =================
     async signUp(inputs: signupDto): Promise<SignUpResponse> {
@@ -40,17 +40,13 @@ export class AuthenticationService {
         });
 
         // OTP
-        const code = randomInt(1000, 9999).toString();
-        const hashedOtp = await generateHash(code);
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();;
+        const otpHash = await generateHash(otp);
 
-        const otpDoc = await this.OtpRepo.create({
-            code: hashedOtp,
-            expiredAt: new Date(Date.now() + 2 * 60 * 1000),
-            createdBy: user._id,
-            type: OtpEnum.ConfirmEmail
-        });
+        const redisKey = `otp_${user._id}`;
+        await this.redis.set(redisKey, otpHash, 1 * 60);
 
-        await sendOtpEmail(email, code);
+        await sendOtpEmail(email, otp);
         // const otp = Math.floor(1000 + Math.random() * 9000).toString();
         // const otpHash = await generateHash(otp);
 
@@ -73,30 +69,32 @@ export class AuthenticationService {
     async verifyOtpService(email: string, otp: string) {
         const user = await this.UserRepo.findOne({ email });
 
-        if (!user) throw new Error("User not found");
+        if (!user) {
+            throw new ConflictException("User not found");
+        }
 
         if (user.isVerified) {
             return { message: "Already verified" };
         }
 
-        const otpDoc = await this.OtpRepo.findOne({
-            createdBy: user._id,
-            type: OtpEnum.ConfirmEmail
-        });
+        const redisKey = `otp_${user._id}`;
 
-        if (!otpDoc) {
+        const otpHash = await this.redis.get(redisKey);
+
+        if (!otpHash) {
             throw new ConflictException("OTP expired");
         }
 
-        const isValid = await compareHash(otp, otpDoc.code);
-        if (!isValid) throw new ConflictException("Invalid OTP");
+        const isValid = await compareHash(otp, otpHash);
 
-        if (otpDoc.expiredAt < new Date()) {
-            throw new ConflictException("OTP expired");
+        if (!isValid) {
+            throw new ConflictException("Invalid OTP");
         }
 
         user.isVerified = true;
         await user.save();
+
+        await this.redis.deleteKey(redisKey);
 
         return {
             message: "Account verified",
@@ -120,17 +118,17 @@ export class AuthenticationService {
             throw new ConflictException("Email not verified");
         }
 
-        // const attemptsKey = `login_attempts_${email}`;
-        // const attempts = Number(await get(attemptsKey)) || 0;
+        const attemptsKey = `login_attempts_${email}`;
+        const attempts = Number(await this.redis.get(attemptsKey)) || 0;
 
-        // if (attempts >= 5) {
-        //     const time = await ttl(attemptsKey);
-        //     throw new Error(`Try again after ${time}s`);
-        // }
+        if (attempts >= 5) {
+            const time = await this.redis.ttl(attemptsKey);
+            throw new Error(`Try again after ${time}s`);
+        }
 
         const isValid = await compareHash(password, user.password);
         if (!isValid) {
-            // await set(attemptsKey, (attempts + 1).toString(), 5 * 60);
+            await this.redis.set(attemptsKey, (attempts + 1).toString(), 5 * 60);
             throw new ConflictException("Invalid credentials");
         }
 
@@ -236,8 +234,8 @@ export class AuthenticationService {
         }
 
         return await this.TokenSecurity.createLoginCredentials({
-                _id: exist._id.toString(),
-                role: exist.role || RoleEnum.USER
-            });
+            _id: exist._id.toString(),
+            role: exist.role || RoleEnum.USER
+        });
     }
 }
