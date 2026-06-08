@@ -7,6 +7,7 @@ import { OtpRepo } from "src/common/repo/otp.repo";
 import { User, userSchema } from "src/DB/User/user.model";
 import { MongooseModule } from "@nestjs/mongoose";
 import { Otp, otpSchema } from "src/DB/OTP/otp.model";
+import { S3Service } from "src/common/services/s3.service";
 
 @Module({
     imports: [
@@ -16,7 +17,7 @@ import { Otp, otpSchema } from "src/DB/OTP/otp.model";
         ]),
     ], exports: [UserService],
     controllers: [UserController],
-    providers: [UserService, TokenSecurity, UserRepo, OtpRepo],
+    providers: [UserService, TokenSecurity, UserRepo, OtpRepo, S3Service],
 })
 
 export class UserModule {

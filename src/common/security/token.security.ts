@@ -7,7 +7,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { User } from "src/DB/User/user.model.js";
 import { UserRepo } from "../repo/user.repo.js";
-import { Injectable } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 interface TokenPayload {
     _id: string;
@@ -100,13 +100,13 @@ export class TokenSecurity {
         const decodedRaw = jwt.decode(token) as TokenPayload;
 
         if (!decodedRaw || !decodedRaw.aud) {
-            throw new Error("Invalid token");
+            throw new UnauthorizedException("Invalid token");
         }
 
         const { tokenType: decodedType, role } = JSON.parse(decodedRaw.aud);
 
         if (decodedType !== tokenType) {
-            throw new Error("Invalid token type");
+            throw new UnauthorizedException("Invalid token type");
         }
 
         const { signture, refreshsSignture } = this.getTokenSignature(role);
@@ -121,7 +121,7 @@ export class TokenSecurity {
         const user = await this.UserRepo.findById(verifiedPayload._id);
 
         if (!user) {
-            throw new Error("User not registered");
+            throw new UnauthorizedException("User not registered");
         }
 
         if (
@@ -129,7 +129,7 @@ export class TokenSecurity {
             user.changeCredentialsTime.getTime() >
             (verifiedPayload.iat || 0) * 1000
         ) {
-            throw new Error("Token has been invalidated due to credential change");
+            throw new UnauthorizedException("Token has been invalidated due to credential change");
         }
 
         return {
