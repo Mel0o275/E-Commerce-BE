@@ -5,10 +5,15 @@ import { brandRepo } from 'src/common/repo/brand.repo';
 import { HydratedDocument } from 'mongoose';
 import { IUser } from 'src/common/interface/user.interface';
 import { S3Service } from 'src/common/services/s3.service';
+import { productRepo } from 'src/common/repo/product.repo';
 
 @Injectable()
 export class BrandService {
-  constructor(private readonly brandRepo: brandRepo, private readonly s3Service: S3Service) { }
+  constructor(
+    private readonly brandRepo: brandRepo,
+    private readonly productRepo: productRepo,
+    private readonly s3Service: S3Service,
+  ) { }
   async create(
     { name }: CreateBrandDto,
     file: Express.Multer.File,
@@ -41,7 +46,9 @@ export class BrandService {
   }
 
   async findAll() {
-    const brands = await this.brandRepo.find();
+    const brands = await this.brandRepo.find(
+      { isDeleted: false },
+    );
 
     return {
       message: 'Brands fetched successfully',
@@ -51,6 +58,10 @@ export class BrandService {
 
   async findOne(id: string) {
     const brand = await this.brandRepo.findById(id);
+    if (!brand || (brand as any).isDeleted) {
+      throw new ConflictException('Brand not found');
+    }
+
 
     return {
       message: 'Brand fetched successfully',
@@ -106,24 +117,36 @@ export class BrandService {
 
   async remove(id: string) {
 
-    const brand = await this.brandRepo.findById(id);
+    const category = await this.brandRepo.findById(id);
 
-    if (!brand) {
+    if (!category) {
       throw new ConflictException('Brand not found');
     }
 
-    if ((brand as any).image) {
-      await this.s3Service.deleteFile({
-        Key: (brand as any).image,
-      });
-    }
-
-    await this.brandRepo.deleteOne({
-      _id: id,
+    const products = await this.productRepo.findAll({
+      brandId: id,
     });
 
+    for (const product of products) {
+      if ((product as any).image) {
+        await this.s3Service.deleteFile({
+          Key: (product as any).image,
+        });
+      }
+    }
+
+    await this.productRepo.updateMany(
+      { brandId: id },
+      { isDeleted: true },
+    );
+
+    await this.brandRepo.updateOne(
+      { _id: id },
+      { isDeleted: true },
+    );
+
     return {
-      message: 'Brand deleted successfully',
+      message: 'Brand and related products soft deleted successfully',
     };
   }
 }

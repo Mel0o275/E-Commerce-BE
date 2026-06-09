@@ -7,6 +7,7 @@ import { CategoryModule } from './Modules/category/category.module';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BrandModule } from './Modules/brand/brand.module';
+import { ProductModule } from './Modules/product/product.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -14,7 +15,7 @@ import { BrandModule } from './Modules/brand/brand.module';
     isGlobal: true
   }),
   MongooseModule.forRoot(process.env.DB_URI as string)
-  ,AuthenticationModule, UserModule, CategoryModule, BrandModule],
+  ,AuthenticationModule, UserModule, CategoryModule, BrandModule, ProductModule],
   controllers: [AppController],
   providers: [AppService],
 })

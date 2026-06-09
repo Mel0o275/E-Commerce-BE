@@ -3,10 +3,11 @@ import { IUser } from 'src/common/interface/user.interface';
 import { S3Service } from 'src/common/services/s3.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { categoryRepo } from 'src/common/repo/brand.repo copy';
+import { productRepo } from 'src/common/repo/product.repo';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly categoryRepo: categoryRepo, private readonly s3Service: S3Service) { }
+  constructor(private readonly categoryRepo: categoryRepo, private readonly s3Service: S3Service, private readonly productRepo: productRepo) { }
   async create(
     { name }: CreateCategoryDto,
     user: IUser,
@@ -15,36 +16,41 @@ export class CategoryService {
     const exists = await this.categoryRepo.findOne({ name });
 
     if (exists) {
-      throw new ConflictException('Brand already exists');
+      throw new ConflictException('Category already exists');
     }
 
-    const brand = await this.categoryRepo.create({
+    const category = await this.categoryRepo.create({
       name,
       createdBy: user._id,
       updatedBy: user._id,
     });
 
     return {
-      message: 'Brand created successfully',
-      brand,
+      message: 'Category created successfully',
+      category,
     };
   }
 
   async findAll() {
-    const brands = await this.categoryRepo.find();
+    const categories = await this.categoryRepo.find(
+      { isDeleted: false },
+    );
 
     return {
-      message: 'Brands fetched successfully',
-      brands,
+      message: 'Categories fetched successfully',
+      categories,
     };
   }
 
   async findOne(id: string) {
-    const brand = await this.categoryRepo.findById(id);
+    const category = await this.categoryRepo.findById(id);
+    if(!category || (category as any).isDeleted) {
+      throw new ConflictException('Category not found');
+    }
 
     return {
-      message: 'Brand fetched successfully',
-      brand,
+      message: 'Category fetched successfully',
+      category,
     };
   }
 
@@ -92,11 +98,37 @@ export class CategoryService {
   }
 
   async remove(id: string) {
-    const brand = await this.categoryRepo.deleteOne({ _id: id });
+
+    const category = await this.categoryRepo.findById(id);
+
+    if (!category) {
+      throw new ConflictException('Category not found');
+    }
+
+    const products = await this.productRepo.findAll({
+      categoryId: id,
+    });
+
+    for (const product of products) {
+      if ((product as any).image) {
+        await this.s3Service.deleteFile({
+          Key: (product as any).image,
+        });
+      }
+    }
+
+    await this.productRepo.updateMany(
+      { categoryId: id },
+      { isDeleted: true },
+    );
+
+    await this.categoryRepo.updateOne(
+      { _id: id },
+      { isDeleted: true },
+    );
 
     return {
-      message: 'Brand deleted successfully',
-      brand,
+      message: 'Category and related products soft deleted successfully',
     };
   }
 }

@@ -9,21 +9,25 @@ import { categoryRepo } from 'src/common/repo/brand.repo copy';
 import { S3Service } from 'src/common/services/s3.service';
 import { TokenSecurity } from 'src/common/security/token.security';
 import { UserRepo } from 'src/common/repo/user.repo';
-
+import { ProductService } from '../product/product.service';
+import { Product, productSchema } from 'src/DB/Product/product.model';
+import { productRepo } from 'src/common/repo/product.repo';
 @Module({
   imports: [
     ConfigModule,
     MongooseModule.forFeature([
       { name: Category.name, schema: categorySchema },
-      { name: User.name, schema: userSchema },
+      { name: User.name, schema: userSchema },      
+      { name: Product.name, schema: productSchema },
     ]),
   ],
   controllers: [CategoryController],
   providers: [
     CategoryService,
     categoryRepo,
+    productRepo,
     S3Service,
-
+    ProductService,
     TokenSecurity,
     UserRepo,
     ConfigService,
