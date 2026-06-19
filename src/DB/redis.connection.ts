@@ -1,15 +1,23 @@
-import {createClient} from 'redis';
-import { REDIS_URL } from '../config/config';
+import { Global, Module } from '@nestjs/common';
+import { createClient } from 'redis';
+import { RedisService } from 'src/common/services/redis.service';
 
-export const redisClient = createClient({
-    url: REDIS_URL
+@Global()
+@Module({
+    providers: [
+        {
+            provide: 'Redis_Client',
+            useFactory: async () => {
+                const client = createClient({
+                    url: process.env.REDIS_URL,
+                });
+
+                await client.connect();
+                return client;
+            },
+        },
+        RedisService,
+    ],
+    exports: ['Redis_Client', RedisService],
 })
-
-export const connectRedis = async () => {
-    try {
-        await redisClient.connect();
-        console.log("Connected to Redis successfully");
-    } catch (error) {
-        console.error("Error connecting to Redis:", error);
-    }
-}
+export class RedisModule { }

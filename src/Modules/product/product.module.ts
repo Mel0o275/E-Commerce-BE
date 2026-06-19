@@ -9,6 +9,7 @@ import { S3Service } from 'src/common/services/s3.service';
 import { productRepo } from 'src/common/repo/product.repo';
 import { TokenSecurity } from 'src/common/security/token.security';
 import { UserRepo } from 'src/common/repo/user.repo';
+import { productResolver } from './product.resolver';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UserRepo } from 'src/common/repo/user.repo';
     TokenSecurity,
     UserRepo,
     ConfigService,
+    productResolver,
   ],
 })
 export class ProductModule {}

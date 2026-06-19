@@ -1,0 +1,73 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type OneUserResponse {
+  _id: ID!
+  firstName: String!
+  lastName: String!
+  email: String!
+  bio: String
+  profileImage: String
+  coverImages: [String!]
+  DOB: DateTime
+  confirmedAt: DateTime
+  gender: GenderEnum
+  role: RoleEnum
+  provider: provider!
+  isVerified: Boolean
+  changeCredentialsTime: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+enum GenderEnum {
+  MALE
+  FEMALE
+}
+
+enum RoleEnum {
+  USER
+  ADMIN
+}
+
+enum provider {
+  LOCAL
+  GOOGLE
+}
+
+type OneProductResponse {
+  _id: ID!
+  brandId: ID!
+  categoryId: ID!
+  createdBy: OneUserResponse
+  updatedBy: String
+  description: String!
+  name: String!
+  image: String!
+  price: Float!
+  rating: Float
+  updatedAt: DateTime
+  createdAt: DateTime!
+}
+
+type PaginateProductResponse {
+  docs: [OneProductResponse!]!
+  currentPage: Int
+  pages: Int
+  size: Int
+}
+
+type Query {
+  allProducts(input: ProductPaginationInput): PaginateProductResponse!
+}
+
+input ProductPaginationInput {
+  page: Int! = 1
+  size: Int! = 10
+}

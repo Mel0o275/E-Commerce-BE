@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UploadedFile, UseInterceptors, Query } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -9,6 +9,7 @@ import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleEnum } from 'src/common/enum/user.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { cloudFileUpload } from 'src/common/utils/multer/multer';
+import { ProductPaginationInput } from './entities/product.entity';
 
 @Controller('product')
 export class ProductController {
@@ -34,8 +35,10 @@ export class ProductController {
   }
 
   @Get()
-  findAll() {
-    return this.productService.findAll();
+  findAll(
+    @Query() input: ProductPaginationInput,
+  ) {
+    return this.productService.findAll(input);
   }
 
   @Get(':id')

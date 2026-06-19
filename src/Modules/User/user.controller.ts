@@ -8,6 +8,8 @@ import type { Request } from 'express'
 import { User } from "src/common/decorators/user.decorator";
 import type { IUser } from "src/common/interface/user.interface";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { ttl } from "src/common/decorators/ttl.decorator";
+import { CustomCacheInterceptor } from "src/common/interceptors/cache.Interceptor";
 // @SetMetadata("tokenType", TokenTypeEnum.TOKEN)
 interface CustomRequest extends Request {
     user?: any;
@@ -21,9 +23,10 @@ export class UserController {
 
     }
 
-    @Auth([RoleEnum.USER])
+    @Auth([RoleEnum.USER, RoleEnum.ADMIN])
     // @Role([RoleEnum.ADMIN])
     // @UseGuards(AuthenticationGuard, AuthorizationGuard)
+    @ttl(60)
     @Get()
     profile(@User() user: IUser) {
         return this.UserService.profile(user);
@@ -38,6 +41,18 @@ export class UserController {
     ) {
         return this.UserService.profileImage(user, file);
     }
+
+    @UseInterceptors(CustomCacheInterceptor)
+    @Get("cache-test")
+    async cacheTest() {
+        console.log("DB");
+
+        return {
+            message: "from database",
+            time: new Date().toISOString(),
+        };
+    }
+
 
     // router.patch("/profile-image", authentication(),
     // // cloudFileUpload({

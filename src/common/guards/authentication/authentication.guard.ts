@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { Observable } from 'rxjs';
 import { TokenTypeEnum } from 'src/common/enum/user.enum';
 import { TokenSecurity } from 'src/common/security/token.security';
@@ -17,10 +18,10 @@ export class AuthenticationGuard implements CanActivate {
     )?? TokenTypeEnum.TOKEN;
     console.log({context, tokenType});
     // const req = context.switchToHttp().getRequest()
-    const type = context.getType()
+    const type = context.getType<'http' | 'graphql' | 'ws'>()
     console.log(type);
     let authorization : string = ''
-    let req : any
+    let req! : any
     switch (type) {
       case 'http':
         const ctx = context.switchToHttp()
@@ -28,19 +29,17 @@ export class AuthenticationGuard implements CanActivate {
         authorization = req.headers.authorization
         break;
 
-      case 'rpc':
-        const ctxR = context.switchToRpc()
-        req = ctxR.getData()
+      case 'graphql':
+        req = GqlExecutionContext.create(context).getContext().req
+        authorization = req.headers.authorization
         break;
 
-      case 'rpc':
-        const ctxW = context.switchToWs()
-        req = ctxW.getData()
-        break;
 
       default:
         break;
     }
+
+    if(!authorization) return false
 
     const {decoded, user} = await this.tokenSecurity.verifyToken(authorization, tokenType)
     req.credentials = {decoded, user}

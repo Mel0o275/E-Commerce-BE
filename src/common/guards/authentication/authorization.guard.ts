@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { HydratedDocument } from 'mongoose';
 import { Observable } from 'rxjs';
 import { RoleEnum, TokenTypeEnum } from 'src/common/enum/user.enum';
@@ -7,7 +8,7 @@ import { IUser } from 'src/common/interface/user.interface';
 
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) { }
 
   async canActivate(
     context: ExecutionContext,
@@ -24,9 +25,13 @@ export class AuthorizationGuard implements CanActivate {
 
     let user!: HydratedDocument<IUser>;
 
-    switch (context.getType()) {
+    switch (context.getType() as unknown as string) {
       case 'http':
         user = context.switchToHttp().getRequest().credentials.user;
+        break;
+
+      case 'graphql':
+        user = (GqlExecutionContext.create(context).getContext().req as any).credentials.user;
         break;
     }
 

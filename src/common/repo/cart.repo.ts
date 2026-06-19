@@ -2,18 +2,18 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { BaseRepo } from "./base.repo";
 import { Injectable } from "@nestjs/common";
-import { Product } from "src/DB/Product/product.model";
+import { Cart } from "src/DB/Cart/cart.model";
 
 @Injectable()
-export class productRepo extends BaseRepo<Product> {
+export class cartRepo extends BaseRepo<Cart> {
     constructor(
-        @InjectModel(Product.name)
-        protected readonly productModel: Model<Product>
+        @InjectModel(Cart.name)
+        protected readonly cartModel: Model<Cart>
     ) {
-        super(productModel);
+        super(cartModel);
     }
 
-    find(filter = {}) {
+    async find(filter = {}) {
         return this.model.find(filter);
     }
 }

@@ -17,27 +17,39 @@ export class RedisService {
         return `revoked_tokens:${userId}`;
     }
 
-    async set(key: string, value: string, expireTime?: number): Promise<void> {
-        try {
-            await this.client.set(
-                key,
-                value,
-                expireTime ? { EX: expireTime } : undefined,
-            );
-        } catch (error) {
-            console.error("Error setting value in Redis:", error);
-            throw error;
-        }
-    }
+async set(key: string, value: any, expireTime?: number): Promise<void> {
+    try {
+        const data =
+            typeof value === "string"
+                ? value
+                : JSON.stringify(value);
 
-    async get(key: string): Promise<string | null> {
-        try {
-            return await this.client.get(key);
-        } catch (error) {
-            console.error("Error getting value from Redis:", error);
-            throw error;
-        }
+        await this.client.set(
+            key,
+            data,
+            expireTime ? { EX: expireTime } : undefined,
+        );
+    } catch (error) {
+        console.error("Error setting value in Redis:", error);
+        throw error;
     }
+}
+
+async get(key: string): Promise<any> {
+    try {
+        const value = await this.client.get(key);
+        if (!value) return null;
+
+        try {
+            return JSON.parse(value);
+        } catch {
+            return value;
+        }
+    } catch (error) {
+        console.error("Error getting value from Redis:", error);
+        throw error;
+    }
+}
 
     async update(
         key: string,

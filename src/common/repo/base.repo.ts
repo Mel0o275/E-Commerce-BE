@@ -72,4 +72,5 @@ export abstract class BaseRepo<TDocument> {
     async findByIdAndDelete(id: string) {
         return this.model.findByIdAndDelete(id);
     }
+    
 }
