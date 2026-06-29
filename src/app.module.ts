@@ -15,6 +15,7 @@ import { CopounModule } from './Modules/copoun/copoun.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
+import { OrderModule } from './Modules/order/order.module';
 
 @Module({
   imports: [
@@ -43,7 +44,8 @@ import { join } from 'path';
     ProductModule,
     CartModule,
     RedisModule,
-    CopounModule
+    CopounModule,
+    OrderModule
   ],
 
   controllers: [AppController],
